@@ -4,25 +4,38 @@ El proyecto incluye SonarQube Community para análisis estático de código (SAS
 
 ### Configuración inicial (solo primera vez)
 
-1. Arranca SonarQube junto con los demás servicios:
+1. Arranca todos los servicios:
    ```
    docker-compose up --build -d
    ```
 2. Espera que SonarQube termine de iniciar (puede tomar 1-2 minutos) y accede a http://localhost:9000
 3. Login por defecto: `admin` / `admin`
 4. **Cambia la contraseña** cuando el sistema lo solicite
-5. Ve a **http://localhost:9000/account/security/** y genera un token con nombre `local-ci`
-6. Copia el token — lo necesitarás para el paso siguiente
+5. Ve a **http://localhost:9000/account/security/** y genera un token con nombre `github-actions`
+6. El workflow ya está configurado con el secret `SONAR_TOKEN` en GitHub y el runner auto-registrado como servicio en docker-compose
 
-### GitHub Actions
+### Self-hosted Runner
 
-El workflow `.github/workflows/sonarqube.yml` levanta SonarQube automáticamente como servicio dentro del runner y genera un token temporal para cada ejecución. No requiere configuración adicional de secrets.
+El pipeline CI/CD usa un **self-hosted runner** (`actions-runner`) que corre como contenedor Docker dentro del mismo `docker-compose.yml`. Esto permite:
 
-Si en el futuro quisieras apuntar a tu instancia local en vez de usar el servicio del workflow, configura estos **secrets en GitHub**:
-- `SONAR_HOST_URL`: `http://<tu-ip>:9000`
-- `SONAR_TOKEN`: el token generado en el paso anterior
+- Análisis persistente en SonarQube local (historial, quality gates, métricas)
+- El runner se registra automáticamente contra el repo `JulioViche/taller-sast`
+- El token de GitHub se configura vía `.env` (ver `.env.example`)
 
-Y cambia en el workflow `SONAR_HOST_URL: http://localhost:9000` por `SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}`.
+### Workflow
+
+El archivo `.github/workflows/sonarqube.yml`:
+- Se ejecuta en `push` y `pull_request` a `main`
+- Corre sobre el runner `[self-hosted, wsl]`
+- Escanea los 4 proyectos via matrix strategy
+- Usa los secrets de GitHub `SONAR_TOKEN` y `SONAR_HOST_URL` (configurados previamente)
+
+Para agregar este workflow a tu propio repo:
+1. Configura los secrets en GitHub → Settings → Secrets and variables → Actions:
+   - `SONAR_TOKEN`: token generado desde la UI de SonarQube
+   - `SONAR_HOST_URL`: `http://sonarqube:9000`
+2. Crea el archivo `.env` con tu `GITHUB_PAT` (copiando `.env.example`)
+3. Ejecuta `docker-compose up -d`
 
 ---
 

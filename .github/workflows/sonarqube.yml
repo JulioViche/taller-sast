@@ -8,14 +8,7 @@ on:
 
 jobs:
   sonarqube:
-    runs-on: ubuntu-latest
-    services:
-      sonarqube:
-        image: sonarqube:community
-        env:
-          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: true
-        ports:
-          - 9000:9000
+    runs-on: [self-hosted, wsl]
     strategy:
       matrix:
         app:
@@ -29,7 +22,7 @@ jobs:
       - name: Wait for SonarQube
         run: |
           for i in $(seq 1 30); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:9000 2>/dev/null || echo "000")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://sonarqube:9000 2>/dev/null || echo "000")
             if [ "$STATUS" = "200" ]; then
               echo "SonarQube is ready"
               break
@@ -38,19 +31,10 @@ jobs:
             sleep 10
           done
 
-      - name: Generate SonarQube token
-        run: |
-          sleep 15
-          curl -s -u admin:admin -X POST "http://localhost:9000/api/users/change_password" \
-            -d "login=admin&previousPassword=admin&password=admin" || true
-          RESP=$(curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate" \
-            -d "name=ci-token-$(date +%s)")
-          echo "SONAR_TOKEN=$(echo $RESP | jq -r '.token')" >> $GITHUB_ENV
-
       - name: SonarQube Scan (${{ matrix.app }})
         uses: SonarSource/sonarqube-scan-action@v5
         with:
           projectBaseDir: apps/${{ matrix.app }}
         env:
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-          SONAR_HOST_URL: http://localhost:9000
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: http://sonarqube:9000

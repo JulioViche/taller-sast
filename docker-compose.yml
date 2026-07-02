@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   auth-db:
     image: postgres:17-alpine
@@ -92,9 +90,28 @@ services:
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
 
+  actions-runner:
+    image: myoung34/github-runner:latest
+    container_name: actions-runner
+    environment:
+      REPO_URL: https://github.com/JulioViche/taller-sast
+      ACCESS_TOKEN: ${GITHUB_PAT}
+      RUNNER_NAME: taller-sast-runner
+      RUNNER_LABELS: wsl,self-hosted
+      RUNNER_WORKDIR: /home/runner/_work
+      RUNNER_GROUP: default
+      EPHEMERAL: false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner-data:/home/runner
+    depends_on:
+      - sonarqube
+    restart: unless-stopped
+
 volumes:
   auth-db-data:
   product-db-data:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
+  runner-data:
