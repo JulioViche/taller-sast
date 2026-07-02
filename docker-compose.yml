@@ -55,7 +55,7 @@ services:
     restart: always
 
   product-service:
-    build: ./apps/product-service   # ← ruta actualizada
+    build: ./apps/products
     container_name: product-service
     ports:
       - "3001:3000"
@@ -80,6 +80,21 @@ services:
       - auth-service
       - product-service
 
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+
 volumes:
   auth-db-data:
   product-db-data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
